@@ -35,6 +35,7 @@ export default function BattleModePage() {
   const [result, setResult] = useState(null);
   const [runResult, setRunResult] = useState(null);
   const [showVictoryModal, setShowVictoryModal] = useState(false);
+  const [showDefeatModal, setShowDefeatModal] = useState(false);
 
   // Bottom panel tab: "testcases" or "result"
   const [activeTab, setActiveTab] = useState("testcases");
@@ -101,8 +102,10 @@ export default function BattleModePage() {
           loadBattle();
           if (data.data?.battle?.status === 'finished' && data.data?.battle?.winner_id) {
             const winnerId = data.data.battle.winner_id;
-            if (winnerId !== user?.id && winnerId !== 'tie') {
-              toast.error("Your opponent won the battle!");
+            if (winnerId === user?.id) {
+              setTimeout(() => setShowVictoryModal(true), 500);
+            } else if (winnerId !== 'tie') {
+              setTimeout(() => setShowDefeatModal(true), 500);
             }
           }
         }
@@ -522,8 +525,8 @@ export default function BattleModePage() {
               <button
                 onClick={() => setActiveTab("testcases")}
                 className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "testcases"
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-white"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-white"
                   }`}
               >
                 <span className="flex items-center gap-1.5">
@@ -537,8 +540,8 @@ export default function BattleModePage() {
               <button
                 onClick={() => setActiveTab("result")}
                 className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === "result"
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-white"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-white"
                   }`}
               >
                 <span className="flex items-center gap-1.5">
@@ -563,10 +566,10 @@ export default function BattleModePage() {
                         <div key={idx} className="rounded-lg border border-zinc-800 overflow-hidden">
                           {/* Case header */}
                           <div className={`flex items-center justify-between px-3 py-2 text-xs font-medium ${runTc
-                              ? runTc.passed
-                                ? 'bg-emerald-500/10 text-emerald-400'
-                                : 'bg-red-500/10 text-red-400'
-                              : 'bg-zinc-900 text-zinc-400'
+                            ? runTc.passed
+                              ? 'bg-emerald-500/10 text-emerald-400'
+                              : 'bg-red-500/10 text-red-400'
+                            : 'bg-zinc-900 text-zinc-400'
                             }`}>
                             <span className="flex items-center gap-1.5">
                               {runTc ? (
@@ -691,6 +694,47 @@ export default function BattleModePage() {
           </div>
           <DialogFooter>
             <Button className="w-full" onClick={() => { setShowVictoryModal(false); navigate('/battle'); }}>Back to Battle Lobby</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Defeat Modal */}
+      <Dialog open={showDefeatModal} onOpenChange={setShowDefeatModal}>
+        <DialogContent className="bg-[#121215] border-[#27272a] max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl font-bold text-red-400 flex items-center justify-center gap-2">
+              <XCircle className="w-8 h-8" />Defeat
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-6">
+            <div className="text-6xl mb-4">😔</div>
+            <p className="text-xl text-white mb-2">You Lost the Battle!</p>
+            <p className="text-muted-foreground mb-4">Your opponent solved the problem first. Better luck next time!</p>
+            {battle && (
+              <div className="bg-zinc-900 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Winner:</span>
+                  <span className="text-yellow-400 font-medium">
+                    {battle.player1_id === user?.id ? battle.player2_username : battle.player1_username}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Your Score:</span>
+                  <span className="text-red-400 font-mono">
+                    {(battle.player1_id === user?.id ? battle.player1_score : battle.player2_score)?.toFixed(1) || '0.0'}/100
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Opponent Score:</span>
+                  <span className="text-emerald-400 font-mono">
+                    {(battle.player1_id === user?.id ? battle.player2_score : battle.player1_score)?.toFixed(1) || '0.0'}/100
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button className="w-full" variant="outline" onClick={() => { setShowDefeatModal(false); navigate('/battle'); }}>Back to Battle Lobby</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
