@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/services/api";
 import { Button } from "@/components/ui/button";
@@ -16,13 +16,7 @@ export default function DiscussionsTab({ problemId }) {
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyContent, setReplyContent] = useState("");
 
-  useEffect(() => {
-    if (problemId) {
-      loadDiscussions();
-    }
-  }, [problemId]);
-
-  const loadDiscussions = async () => {
+  const loadDiscussions = useCallback(async () => {
     try {
       const res = await api.get(`/api/problems/${problemId}/discussions`);
       setDiscussions(res.data);
@@ -31,7 +25,13 @@ export default function DiscussionsTab({ problemId }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [problemId]);
+
+  useEffect(() => {
+    if (problemId) {
+      loadDiscussions();
+    }
+  }, [problemId, loadDiscussions]);
 
   const postComment = async () => {
     if (!newComment.trim()) {
@@ -125,8 +125,8 @@ export default function DiscussionsTab({ problemId }) {
             disabled={!user}
           />
           <div className="flex justify-end">
-            <Button 
-              onClick={postComment} 
+            <Button
+              onClick={postComment}
               disabled={submitting || !user}
               data-testid="post-comment-btn"
             >
@@ -160,23 +160,21 @@ export default function DiscussionsTab({ problemId }) {
                       <span className="text-sm text-muted-foreground">{formatDate(disc.created_at)}</span>
                     </div>
                     <p className="text-zinc-300 whitespace-pre-wrap">{disc.content}</p>
-                    
+
                     {/* Actions */}
                     <div className="flex items-center gap-4 mt-3">
                       <button
                         onClick={() => vote(disc.id, "up")}
-                        className={`flex items-center gap-1.5 text-sm ${
-                          disc.user_vote === "up" ? "text-primary" : "text-muted-foreground hover:text-white"
-                        } transition-colors`}
+                        className={`flex items-center gap-1.5 text-sm ${disc.user_vote === "up" ? "text-primary" : "text-muted-foreground hover:text-white"
+                          } transition-colors`}
                       >
                         <ThumbsUp className="w-4 h-4" />
                         <span>{disc.upvotes}</span>
                       </button>
                       <button
                         onClick={() => vote(disc.id, "down")}
-                        className={`flex items-center gap-1.5 text-sm ${
-                          disc.user_vote === "down" ? "text-red-400" : "text-muted-foreground hover:text-white"
-                        } transition-colors`}
+                        className={`flex items-center gap-1.5 text-sm ${disc.user_vote === "down" ? "text-red-400" : "text-muted-foreground hover:text-white"
+                          } transition-colors`}
                       >
                         <ThumbsDown className="w-4 h-4" />
                         <span>{disc.downvotes}</span>

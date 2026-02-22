@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import api from "@/services/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,13 +9,7 @@ export default function SimilarProblems({ problemId }) {
   const [problems, setProblems] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (problemId) {
-      loadSimilar();
-    }
-  }, [problemId]);
-
-  const loadSimilar = async () => {
+  const loadSimilar = useCallback(async () => {
     try {
       const res = await api.get(`/api/problems/${problemId}/similar?limit=5`);
       setProblems(res.data);
@@ -24,7 +18,13 @@ export default function SimilarProblems({ problemId }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [problemId]);
+
+  useEffect(() => {
+    if (problemId) {
+      loadSimilar();
+    }
+  }, [problemId, loadSimilar]);
 
   const getDifficultyColor = (difficulty) => {
     switch (difficulty?.toLowerCase()) {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/services/api";
 import { Badge } from "@/components/ui/badge";
@@ -20,11 +20,7 @@ export default function ProblemsPage() {
   const [diffFilter, setDiffFilter] = useState("");
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchProblems();
-  }, [diffFilter]);
-
-  const fetchProblems = async () => {
+  const fetchProblems = useCallback(async () => {
     setLoading(true);
     try {
       const params = {};
@@ -36,7 +32,11 @@ export default function ProblemsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [diffFilter]);
+
+  useEffect(() => {
+    fetchProblems();
+  }, [fetchProblems]);
 
   const filtered = problems.filter(p =>
     p.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -94,11 +94,10 @@ export default function ProblemsPage() {
             <button
               key={d}
               onClick={() => setDiffFilter(d)}
-              className={`text-xs px-3 py-1.5 rounded-sm border transition-colors ${
-                diffFilter === d
-                  ? "border-primary/50 bg-primary/10 text-primary"
-                  : "border-[#27272a] text-muted-foreground hover:border-[#3f3f46] hover:text-foreground"
-              }`}
+              className={`text-xs px-3 py-1.5 rounded-sm border transition-colors ${diffFilter === d
+                ? "border-primary/50 bg-primary/10 text-primary"
+                : "border-[#27272a] text-muted-foreground hover:border-[#3f3f46] hover:text-foreground"
+                }`}
               data-testid={`filter-${d || "all"}`}
             >
               {d ? d.charAt(0).toUpperCase() + d.slice(1) : "All"}

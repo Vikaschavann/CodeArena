@@ -77,18 +77,7 @@ export default function ContestArenaPage() {
 
   const { hours, mins, secs, expired } = useContestTimer(contest?.end_time);
 
-  useEffect(() => {
-    fetchContest();
-    return () => {
-      if (wsRef.current) wsRef.current.close();
-    };
-  }, [contestId]);
-
-  useEffect(() => {
-    if (contestId) connectWs();
-  }, [contestId]);
-
-  const fetchContest = async () => {
+  const fetchContest = useCallback(async () => {
     try {
       const res = await api.get(`/contests/${contestId}`);
       setContest(res.data);
@@ -106,7 +95,7 @@ export default function ContestArenaPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [contestId, navigate]);
 
   const connectWs = useCallback(() => {
     const wsUrl = getWsUrl(`/contest/${contestId}`);
@@ -127,7 +116,7 @@ export default function ContestArenaPage() {
         if (data.type === "leaderboard_update") {
           setLeaderboard(data.data);
         }
-      } catch {}
+      } catch { }
     };
 
     ws.onclose = () => {
@@ -140,6 +129,17 @@ export default function ContestArenaPage() {
     ws.onerror = () => setWsConnected(false);
     wsRef.current = ws;
   }, [contestId]);
+
+  useEffect(() => {
+    fetchContest();
+    return () => {
+      if (wsRef.current) wsRef.current.close();
+    };
+  }, [contestId, fetchContest]);
+
+  useEffect(() => {
+    if (contestId) connectWs();
+  }, [contestId, connectWs]);
 
   const handleCodeChange = (val) => {
     setCode(val || "");
@@ -274,9 +274,8 @@ export default function ContestArenaPage() {
                   setResult(null);
                   setCode(DEFAULT_CODE[language]);
                 }}
-                className={`w-full text-left px-3 py-3 border-b border-[#27272a]/50 hover:bg-white/[0.03] transition-colors ${
-                  activeProblem?.id === p.id ? "bg-primary/10 border-l-2 border-l-primary" : ""
-                }`}
+                className={`w-full text-left px-3 py-3 border-b border-[#27272a]/50 hover:bg-white/[0.03] transition-colors ${activeProblem?.id === p.id ? "bg-primary/10 border-l-2 border-l-primary" : ""
+                  }`}
                 data-testid={`problem-tab-${i}`}
               >
                 <div className="flex items-center justify-between">
@@ -390,9 +389,8 @@ export default function ContestArenaPage() {
                 leaderboard.map((entry, i) => (
                   <div
                     key={entry.user_id}
-                    className={`flex items-center gap-2 px-3 py-2.5 border-b border-[#27272a]/50 ${
-                      entry.user_id === user?.id ? "bg-primary/5" : ""
-                    }`}
+                    className={`flex items-center gap-2 px-3 py-2.5 border-b border-[#27272a]/50 ${entry.user_id === user?.id ? "bg-primary/5" : ""
+                      }`}
                     data-testid={`leaderboard-row-${i}`}
                   >
                     <div className="w-5 text-center">

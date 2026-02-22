@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Sparkles, Target, Zap, Clock, BookOpen, Layers, CheckCircle2, ChevronRight, Route } from "lucide-react";
+import { toast } from "sonner";
 
 export default function AiRoadmapPage() {
     const [time, setTime] = useState("");
@@ -23,6 +24,8 @@ export default function AiRoadmapPage() {
             setRoadmap(res.data);
         } catch (error) {
             console.error(error);
+            const message = error.response?.data?.detail || "Failed to generate roadmap. Please try again.";
+            toast.error(message);
         } finally {
             setLoading(false);
         }
@@ -45,8 +48,8 @@ export default function AiRoadmapPage() {
                         <span className="text-sm font-medium text-primary uppercase tracking-widest">AI Generated</span>
                     </div>
                     <h1 className="text-4xl font-bold text-emerald-400 mb-4">
-    DSA Roadmap Generator
-</h1>
+                        DSA Roadmap Generator
+                    </h1>
                     <p className="text-muted-foreground max-w-xl mx-auto">
                         Harness the power of Gemini AI to build a customized, highly-structured preparation timeline that fits your exact deadline and skill level.
                     </p>

@@ -124,7 +124,7 @@ export default function PairProgrammingPage() {
     ws.onclose = () => {
       // Could reconnect here
     };
-  }, [user]);
+  }, [user, roomId, loadRoom]);
 
   useEffect(() => {
     if (roomId) {

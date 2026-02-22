@@ -15,7 +15,8 @@ export default function CodeReview({ submissionId, onClose }) {
       const res = await api.post("/api/ai/code-review", { submission_id: submissionId });
       setReview(res.data);
     } catch (error) {
-      toast.error("Failed to get code review");
+      const message = error.response?.data?.detail || "Failed to get code review";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -24,7 +25,7 @@ export default function CodeReview({ submissionId, onClose }) {
   // Render markdown-like content
   const renderContent = (content) => {
     if (!content) return null;
-    
+
     // Simple markdown parsing
     return content.split('\n').map((line, i) => {
       // Headers
@@ -46,7 +47,7 @@ export default function CodeReview({ submissionId, onClose }) {
         const parts = line.split('**');
         return (
           <p key={i} className="text-zinc-300">
-            {parts.map((part, j) => 
+            {parts.map((part, j) =>
               j % 2 === 1 ? <strong key={j} className="text-white">{part}</strong> : part
             )}
           </p>
@@ -108,7 +109,7 @@ export default function CodeReview({ submissionId, onClose }) {
                 <span className="text-amber-400">Review temporarily unavailable</span>
               </div>
             )}
-            
+
             {review.source === "ai" && (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
                 <CheckCircle2 className="w-5 h-5 text-primary" />

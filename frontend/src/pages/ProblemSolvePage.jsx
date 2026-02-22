@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 import api from "@/services/api";
@@ -106,12 +106,7 @@ export default function ProblemSolvePage() {
   const keystrokesRef = useRef([]);
   const startTimeRef = useRef(Date.now());
 
-  useEffect(() => {
-    fetchProblem();
-    fetchSubmissions();
-  }, [problemId]);
-
-  const fetchProblem = async () => {
+  const fetchProblem = useCallback(async () => {
     try {
       const res = await api.get(`/problems/${problemId}`);
       setProblem(res.data);
@@ -125,16 +120,21 @@ export default function ProblemSolvePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [problemId, navigate]);
 
-  const fetchSubmissions = async () => {
+  const fetchSubmissions = useCallback(async () => {
     try {
       const res = await api.get(`/submissions/problem/${problemId}`);
       setSubmissions(res.data);
     } catch {
       // Not logged in, ignore
     }
-  };
+  }, [problemId]);
+
+  useEffect(() => {
+    fetchProblem();
+    fetchSubmissions();
+  }, [fetchProblem, fetchSubmissions]);
 
   const handleLanguageChange = (lang) => {
     setLanguage(lang);
@@ -245,8 +245,9 @@ export default function ProblemSolvePage() {
         hint_level: hintLevel
       });
       setHint(res.data.hint);
-    } catch {
-      setHint("Could not load hint. Try again.");
+    } catch (err) {
+      const message = err.response?.data?.detail || "Could not load hint. Try again.";
+      setHint(message);
     } finally {
       setHintLoading(false);
     }
@@ -266,8 +267,9 @@ export default function ProblemSolvePage() {
         question: userMsg
       });
       setAiMessages(prev => [...prev, { role: "ai", content: res.data.response }]);
-    } catch {
-      setAiMessages(prev => [...prev, { role: "ai", content: "Sorry, I couldn't connect to the AI. Please try again." }]);
+    } catch (err) {
+      const message = err.response?.data?.detail || "Sorry, I couldn't connect to the AI. Please try again.";
+      setAiMessages(prev => [...prev, { role: "ai", content: message }]);
     } finally {
       setAiLoading(false);
     }

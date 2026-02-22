@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/services/api";
@@ -40,26 +40,83 @@ export default function BattleModePage() {
   // Bottom panel tab: "testcases" or "result"
   const [activeTab, setActiveTab] = useState("testcases");
 
+  const loadBattle = useCallback(async () => {
+    try {
+      const res = await api.get(`/battles/${battleId}`);
+      setBattle(res.data);
+      if (!code) setCode(getCodeTemplate(language, res.data.problem));
+    } catch {
+      toast.error("Failed to load battle");
+      navigate("/battle");
+    } finally {
+      setLoading(false);
+    }
+  }, [battleId, language, code, navigate]);
+
+  const loadMyBattles = useCallback(async () => {
+    try {
+      const res = await api.get("/battles/active/list");
+      setMyBattles(res.data);
+    } catch { }
+  }, []);
+
+  const connectWebSocket = useCallback(() => {
+    if (!battleId) return;
+    try {
+      const wsUrl = `${process.env.REACT_APP_BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://')}/api/ws/battle/${battleId}`;
+      wsRef.current = new WebSocket(wsUrl);
+      wsRef.current.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'battle_update') {
+          // Use the broadcasted data directly
+          if (data.data?.battle) {
+            setBattle(data.data.battle);
+
+            if (data.data.battle.status === 'finished' && data.data.battle.winner_id) {
+              const winnerId = data.data.battle.winner_id;
+              if (winnerId === user?.id) {
+                setTimeout(() => setShowVictoryModal(true), 500);
+              } else if (winnerId !== 'tie') {
+                setTimeout(() => setShowDefeatModal(true), 500);
+              }
+            }
+          }
+        }
+      };
+      wsRef.current.onerror = () => { };
+      wsRef.current.onclose = () => {
+        // Reconnect after 3 seconds if not deliberately closed
+        setTimeout(connectWebSocket, 3000);
+      };
+    } catch { }
+  }, [battleId, user?.id]);
+
   useEffect(() => {
     if (battleId) {
       loadBattle();
       connectWebSocket();
 
       const pollInterval = setInterval(() => {
-        if (battle?.status === 'active') {
-          loadBattle();
-        }
-      }, 3000);
+        setBattle(prev => {
+          if (prev?.status === 'active') {
+            loadBattle();
+          }
+          return prev;
+        });
+      }, 10000);
 
       return () => {
         clearInterval(pollInterval);
-        if (wsRef.current) wsRef.current.close();
+        if (wsRef.current) {
+          wsRef.current.onclose = null;
+          wsRef.current.close();
+        }
       };
     } else {
       loadMyBattles();
       setLoading(false);
     }
-  }, [battleId]);
+  }, [battleId, loadBattle, connectWebSocket, loadMyBattles]);
 
   // Timer countdown
   useEffect(() => {
@@ -90,50 +147,6 @@ export default function BattleModePage() {
       return () => clearTimeout(timer);
     }
   }, [battle?.status, battle?.winner_id, user?.id, navigate]);
-
-  const connectWebSocket = () => {
-    if (!battleId) return;
-    try {
-      const wsUrl = `${process.env.REACT_APP_BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://')}/api/ws/battle/${battleId}`;
-      wsRef.current = new WebSocket(wsUrl);
-      wsRef.current.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === 'battle_update') {
-          loadBattle();
-          if (data.data?.battle?.status === 'finished' && data.data?.battle?.winner_id) {
-            const winnerId = data.data.battle.winner_id;
-            if (winnerId === user?.id) {
-              setTimeout(() => setShowVictoryModal(true), 500);
-            } else if (winnerId !== 'tie') {
-              setTimeout(() => setShowDefeatModal(true), 500);
-            }
-          }
-        }
-      };
-      wsRef.current.onerror = () => { };
-      wsRef.current.onclose = () => { };
-    } catch { }
-  };
-
-  const loadBattle = async () => {
-    try {
-      const res = await api.get(`/battles/${battleId}`);
-      setBattle(res.data);
-      if (!code) setCode(getCodeTemplate(language, res.data.problem));
-    } catch {
-      toast.error("Failed to load battle");
-      navigate("/battle");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadMyBattles = async () => {
-    try {
-      const res = await api.get("/battles/active/list");
-      setMyBattles(res.data);
-    } catch { }
-  };
 
   const createBattle = async () => {
     if (!user) { toast.error("Please sign in to create a battle"); navigate("/auth"); return; }

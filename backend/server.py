@@ -15,7 +15,7 @@ from jose import JWTError, jwt
 # from emergentintegrations.llm.chat import LlmChat, UserMessage
 import os
 import json
-import google.generativeai as genai
+from google import genai
 import logging
 import uuid
 import random
@@ -1018,7 +1018,7 @@ async def ask_ai_assistant(
 
     chain = assistant_sessions[session_key]
     try:
-        response = await asyncio.to_thread(chain.predict, input=req.question)
+        response = await asyncio.to_thread(chain.predict, input_text=req.question)
         return {"response": response}
     except Exception as e:
         logger.error(f"AI assistant prediction failed: {e}")
@@ -1712,8 +1712,7 @@ async def generate_dsa_roadmap(req: RoadmapRequest):
         raise HTTPException(status_code=500, detail="Gemini API Key missing")
         
     try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        client_genai = genai.Client(api_key=GEMINI_API_KEY)
         
         prompt = f"""
 Generate a structured DSA interview roadmap.
@@ -1749,22 +1748,43 @@ Rules:
 - Practical milestones
 - Return raw JSON only, nothing else
 """
-        response = model.generate_content(prompt)
+        response = client_genai.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+        
+        if not response or not response.text:
+            raise HTTPException(status_code=500, detail="AI returned an empty response. Please try again.")
+
         text = response.text.strip()
         
         # Clean up any potential markdown formatting
         if text.startswith("```json"):
             text = text[7:]
-        if text.startswith("```"):
+        elif text.startswith("```"):
             text = text[3:]
         if text.endswith("```"):
             text = text[:-3]
             
-        return json.loads(text.strip())
+        try:
+            return json.loads(text.strip())
+        except json.JSONDecodeError:
+            # Try to find JSON block if parsing failed
+            import re
+            json_match = re.search(r'\{.*\}', text, re.DOTALL)
+            if json_match:
+                return json.loads(json_match.group(0))
+            raise HTTPException(status_code=500, detail="Failed to parse AI response as JSON")
         
     except Exception as e:
-        logger.error(f"Roadmap generation failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        error_msg = str(e)
+        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+            raise HTTPException(
+                status_code=429, 
+                detail="AI service is currently busy due to high demand. Please wait a minute and try again."
+            )
+        logger.error(f"Roadmap generation failed: {error_msg}")
+        raise HTTPException(status_code=500, detail=f"Roadmap generation failed: {error_msg}")
 
 # ───────────────────────────────────────────────
 # INTERVIEW KITS ROUTES

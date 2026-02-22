@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Editor from "@monaco-editor/react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -11,13 +11,13 @@ export default function CodePlayback({ submission }) {
   const [currentCode, setCurrentCode] = useState("");
   const timerRef = useRef(null);
 
-  const keystrokes = submission?.keystrokes || [];
+  const keystrokes = useMemo(() => submission?.keystrokes || [], [submission?.keystrokes]);
 
   useEffect(() => {
     if (keystrokes.length === 0) return;
     setCurrentCode("");
     setCurrentIndex(0);
-  }, [submission]);
+  }, [submission, keystrokes.length]);
 
   useEffect(() => {
     if (!playing || currentIndex >= keystrokes.length) {
@@ -163,11 +163,10 @@ export default function CodePlayback({ submission }) {
             <button
               key={s}
               onClick={() => setSpeed(s)}
-              className={`text-xs px-2 py-0.5 rounded-sm transition-colors ${
-                speed === s
+              className={`text-xs px-2 py-0.5 rounded-sm transition-colors ${speed === s
                   ? "bg-primary/20 text-primary"
                   : "text-muted-foreground hover:text-foreground"
-              }`}
+                }`}
               data-testid={`speed-${s}x`}
             >
               {s}x
