@@ -109,6 +109,8 @@ export default function PairProgrammingPage() {
             setResult(data.result);
             if (data.result.verdict === "Accepted") {
               toast.success(`🎉 ${data.username} submitted — Accepted!`);
+              // Reload room to refresh solved status for both users
+              if (roomId) loadRoom(roomId);
             } else {
               toast.error(`${data.username} submitted — ${data.result.verdict}`);
             }
@@ -421,8 +423,8 @@ export default function PairProgrammingPage() {
               <div
                 key={p.user_id}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm ${p.user_id === user?.id
-                    ? "bg-primary/15 border border-primary/30 text-primary"
-                    : "bg-zinc-800 border border-zinc-700 text-white"
+                  ? "bg-primary/15 border border-primary/30 text-primary"
+                  : "bg-zinc-800 border border-zinc-700 text-white"
                   }`}
               >
                 <div className={`w-2 h-2 rounded-full ${p.user_id === user?.id ? "bg-primary" : "bg-emerald-400"}`} />
@@ -618,7 +620,7 @@ export default function PairProgrammingPage() {
 
           {/* Result Panel */}
           {result && (
-            <div className={`p-3 border-t border-zinc-800 ${result.verdict === "Accepted" ? "bg-emerald-500/5" : "bg-red-500/5"
+            <div className={`p-3 border-t border-zinc-800 max-h-[220px] overflow-y-auto ${result.verdict === "Accepted" ? "bg-emerald-500/5" : "bg-red-500/5"
               }`}>
               <div className="flex items-center gap-2">
                 {result.verdict === "Accepted" ? (
@@ -632,16 +634,37 @@ export default function PairProgrammingPage() {
                 </span>
                 {result.execution_time && (
                   <span className="text-xs text-muted-foreground font-mono">
-                    {result.execution_time.toFixed(3)}s
+                    {typeof result.execution_time === 'number' ? result.execution_time.toFixed(3) : result.execution_time}s
                   </span>
                 )}
               </div>
               {result.test_results?.length > 0 && (
-                <div className="mt-2 space-y-1">
+                <div className="mt-2 space-y-2">
                   {result.test_results.slice(0, 5).map((tc, i) => (
-                    <div key={i} className={`text-xs rounded px-2 py-1 ${tc.passed ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10"
-                      }`}>
-                      Test {i + 1}: {tc.verdict}
+                    <div key={i} className={`text-xs rounded-lg border overflow-hidden ${tc.passed ? "border-emerald-500/20" : "border-red-500/20"}`}>
+                      <div className={`px-2.5 py-1.5 flex items-center gap-1.5 ${tc.passed ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10"}`}>
+                        {tc.passed ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                        Test {i + 1}: {tc.verdict}
+                      </div>
+                      {!tc.passed && (tc.output || tc.expected) && (
+                        <div className="bg-[#0a0a0b] px-2.5 py-2 space-y-1.5">
+                          {tc.output && (
+                            <div>
+                              <span className="text-[10px] uppercase tracking-wider text-zinc-500">Your Output</span>
+                              <pre className="text-xs font-mono text-red-300 whitespace-pre-wrap mt-0.5">{tc.output}</pre>
+                            </div>
+                          )}
+                          {tc.expected && (
+                            <div>
+                              <span className="text-[10px] uppercase tracking-wider text-zinc-500">Expected</span>
+                              <pre className="text-xs font-mono text-emerald-300 whitespace-pre-wrap mt-0.5">{tc.expected}</pre>
+                            </div>
+                          )}
+                          {tc.note && (
+                            <div className="text-[10px] text-zinc-500 italic">{tc.note}</div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -672,8 +695,8 @@ export default function PairProgrammingPage() {
                 <div key={msg.id} className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
                   <span className="text-[10px] text-zinc-600 mb-0.5 px-1">{msg.username}</span>
                   <div className={`max-w-[90%] px-2.5 py-1.5 rounded-lg text-sm ${isMe
-                      ? "bg-primary/15 border border-primary/25 text-foreground"
-                      : "bg-zinc-800 border border-zinc-700 text-foreground"
+                    ? "bg-primary/15 border border-primary/25 text-foreground"
+                    : "bg-zinc-800 border border-zinc-700 text-foreground"
                     }`}>
                     {msg.text}
                   </div>
